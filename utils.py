@@ -11,64 +11,57 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from conf import settings
 from dataset.dataset import CUB_200_2011_Train, CUB_200_2011_Test
-from models.utils import load_state_dict_from_url
+from torch.utils.data.distributed import DistributedSampler
 
 def get_network(args):
    
-    if args.net == 'resnet18':
-        from models.resnet import resnet18
-        model_ft = resnet18(pretrained=True)
-    elif args.net == 'resnet34':
-        from models.resnet import resnet34
-        model_ft = resnet34(pretrained=True)
-    elif args.net == 'resnet101':
-        from models.resnet import resnet101
-        model_ft = resnet101(pretrained=True)
-    elif args.net == 'resnext101':
-        from models.resnet import resnext101_32x8d
-        model_ft = resnext101_32x8d(pretrained=True)
-    elif args.net == 'resnet50':
-        from models.resnet import resnet50
-        model_ft = resnet50(pretrained=True)
-    elif args.net == 'resnet50_onnx':
-        from models.resnet_onnx import resnet50
-        model_ft = resnet50(pretrained=True)
-    elif args.net == 'resnet152':
-        from models.resnet import resnet152
-        model_ft = resnet152(pretrained=True)
+    if args.net == 'vgg16':
+        from models.vgg import vgg16
+        model_ft = vgg16(args.num_classes,export_onnx=args.export_onnx)
+    elif args.net == 'alexnet':
+        from models.alexnet import alexnet
+        model_ft = alexnet(num_classes=args.num_classes,export_onnx=args.export_onnx)
     elif args.net == 'mobilenet':
         from models.mobilenet import mobilenet_v2
-        model_ft = mobilenet_v2(pretrained=True)
-    elif args.net == 'mobilenet_onnx':
-        from models.mobilenet_onnx import mobilenet_v2
-        model_ft = mobilenet_v2(pretrained=True)
-    elif args.net == 'mobilenetv3':
-        from models.mobilenet_v3 import mobilenetv3_small
-        model_ft = mobilenetv3_small()
-        # pretrained_url='http://10.9.0.146:8888/group1/M00/00/51/CgkAkl7d9P-Ea4J1AAAAANzZ--g202.pth'
-        # model_ft.load_state_dict(load_state_dict_from_url(pretrained_url))
-    elif args.net == 'mobilenetv3_onnx':
-        from models.mobilenet_v3_onnx import mobilenetv3_small
-        model_ft = mobilenetv3_small()
+        model_ft = mobilenet_v2(pretrained=True,export_onnx=args.export_onnx)
+    elif args.net == 'vgg19':
+        from models.vgg import vgg19
+        model_ft = vgg19(args.num_classes,export_onnx=args.export_onnx)
     else:
-        print("The %s is not supported..." %(args.net))
-        return
-    if not args.net.startswith('mobilenet'):
+      if args.net == 'googlenet':
+          from models.googlenet import googlenet
+          model_ft = googlenet(pretrained=True)
+      elif args.net == 'inception':
+          from models.inception import inception_v3
+          model_ft = inception_v3(args,pretrained=True,export_onnx=args.export_onnx)
+      elif args.net == 'resnet18':
+          from models.resnet import resnet18
+          model_ft = resnet18(pretrained=True,export_onnx=args.export_onnx)
+      elif args.net == 'resnet34':
+          from models.resnet import resnet34
+          model_ft = resnet34(pretrained=True,export_onnx=args.export_onnx)
+      elif args.net == 'resnet101':
+          from models.resnet import resnet101
+          model_ft = resnet101(pretrained=True,export_onnx=args.export_onnx)
+      elif args.net == 'resnet50':
+          from models.resnet import resnet50
+          model_ft = resnet50(pretrained=True,export_onnx=args.export_onnx)
+      elif args.net == 'resnet152':
+          from models.resnet import resnet152
+          model_ft = resnet152(pretrained=True,export_onnx=args.export_onnx)
+      else:
+          print("The %s is not supported..." %(args.net))
+          return
+    if args.net == 'mobilenet':
+        num_ftrs = model_ft.classifier[1].in_features
+        model_ft.classifier[1] = nn.Linear(num_ftrs*4, args.num_classes)
+    else:
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, args.num_classes)
-    elif args.net.startswith('mobilenetv3'):
-        num_ftrs = model_ft.classifier[3].in_features
-        model_ft.classifier[3] = nn.Linear(num_ftrs, args.num_classes)
-        model_ft.classifier[4] = nn.BatchNorm1d(args.num_classes)
-    else:
-        num_ftrs = model_ft.classifier[1].in_features
-        model_ft.classifier[1] = nn.Linear(num_ftrs, args.num_classes)
-        
     net = model_ft
 
     return net
 
-'''
 def get_train_dataloader(path,path_txt, transforms, batch_size, num_workers, target_transforms=None):
     """ return training dataloader
     Args:
@@ -80,35 +73,7 @@ def get_train_dataloader(path,path_txt, transforms, batch_size, num_workers, tar
     Returns: train_data_loader:torch dataloader object
     """
     train_dataset = CUB_200_2011_Train(
-        path, 
-        path_txt,
-        transform=transforms,
-        target_transform=target_transforms
-    )
-    train_dataloader =  DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        shuffle=True
-    )
-
-    return train_dataloader
-'''
-
-def get_train_dataloader(path,path_txt, transforms, batch_size, num_workers, target_transforms=None):
-    """ return training dataloader
-    Args:
-        path: path to CUB_200_2011 dataset
-        transforms: transforms of dataset
-        target_transforms: transforms for targets
-        batch_size: dataloader batchsize
-        num_workers: dataloader num_works
-    Returns: train_data_loader:torch dataloader object
-    """
-
-
-    train_dataset = CUB_200_2011_Train(
-        path, 
+        path,
         path_txt,
         transform=transforms,
         target_transform=target_transforms
@@ -125,7 +90,7 @@ def get_train_dataloader(path,path_txt, transforms, batch_size, num_workers, tar
     samples_weight = torch.from_numpy(samples_weight)
     samples_weight = samples_weight.double()
 
-    sampler = torch.utils.data.sampler.WeightedRandomSampler(samples_weight, len(samples_weight), replacement=True) 
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(samples_weight, len(samples_weight), replacement=True)
 
     train_dataloader =  DataLoader(
         train_dataset,
@@ -137,6 +102,33 @@ def get_train_dataloader(path,path_txt, transforms, batch_size, num_workers, tar
 
     return train_dataloader
 
+'''
+def get_train_dataloader(path,path_txt, transforms, batch_size, num_workers, target_transforms=None):
+    """ return training dataloader
+    Args:
+        path: path to CUB_200_2011 dataset
+        transforms: transforms of dataset
+        target_transforms: transforms for targets
+        batch_size: dataloader batchsize
+        num_workers: dataloader num_works
+    Returns: train_data_loader:torch dataloader object
+    """
+    train_dataset = CUB_200_2011_Train(
+        path, 
+        path_txt,
+        transform=transforms,
+        target_transform=target_transforms
+    )
+    train_dataloader =  DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=False,
+        pin_memory=True
+    )
+
+    return train_dataloader
+'''
 def get_test_dataloader(path, path_txt, transforms, batch_size, num_workers, target_transforms=None):
     """ return training dataloader
     Args:
@@ -160,7 +152,61 @@ def get_test_dataloader(path, path_txt, transforms, batch_size, num_workers, tar
         num_workers=num_workers,
         shuffle=True
     )
+
     return test_dataloader
+
+def get_lastlayer_params(net):
+    """get last trainable layer of a net
+    Args:
+        network architectur
+    
+    Returns:
+        last layer weights and last layer bias
+    """
+    last_layer_weights = None
+    last_layer_bias = None
+    for name, para in net.named_parameters():
+        if 'weight' in name:
+            last_layer_weights = para
+        if 'bias' in name:
+            last_layer_bias = para
+        
+    return last_layer_weights, last_layer_bias
+
+def visualize_network(writer, net):
+    """visualize network architecture"""
+    input_tensor = torch.Tensor(3, 3, settings.IMAGE_SIZE, settings.IMAGE_SIZE) 
+    input_tensor = input_tensor.to(next(net.parameters()).device)
+    writer.add_graph(net, Variable(input_tensor, requires_grad=True))
+
+def visualize_lastlayer(writer, net, n_iter):
+    """visualize last layer grads"""
+    weights, bias = get_lastlayer_params(net)
+    writer.add_scalar('LastLayerGradients/grad_norm2_weights', weights.grad.norm(), n_iter)
+    writer.add_scalar('LastLayerGradients/grad_norm2_bias', bias.grad.norm(), n_iter)
+
+def visualize_train_loss(writer, loss, n_iter):
+    """visualize training loss"""
+    writer.add_scalar('Train/loss', loss, n_iter)
+
+def visualize_param_hist(writer, net, epoch):
+    """visualize histogram of params"""
+    for name, param in net.named_parameters():
+        layer, attr = os.path.splitext(name)
+        attr = attr[1:]
+        writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
+
+def visualize_test_loss(writer, loss, epoch):
+    """visualize test loss"""
+    writer.add_scalar('Test/loss', loss, epoch)
+
+def visualize_test_acc(writer, acc, epoch):
+    """visualize test acc"""
+    writer.add_scalar('Test/Accuracy', acc, epoch)
+
+def visualize_learning_rate(writer, lr, epoch):
+    """visualize learning rate"""
+    writer.add_scalar('Train/LearningRate', lr, epoch)
 
 def init_weights(net):
     """the weights of conv layer and fully connected layers 

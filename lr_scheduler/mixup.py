@@ -3,30 +3,27 @@ import torch.nn as nn
 import numpy as np
 
 
-def mixup(alpha, num_classes, data, target, mixup_rate=0.5):
+def mixup(alpha, num_classes, data, target):
     with torch.no_grad():
         bs = data.size(0)
         c = np.random.beta(alpha, alpha)
 
         perm = torch.randperm(bs).cuda()
-        keep_bs = int(bs*(1-mixup_rate))
-        perm[:keep_bs] = torch.arange(keep_bs).cuda()
-        
+
         md = c * data + (1-c) * data[perm, :]
-        mt = c * target + (1-c) * target[perm]
+        mt = c * target + (1-c) * target[perm, :]
         return md, mt
 
 
 class MixUpWrapper(object):
-    def __init__(self, alpha, num_classes, dataloader, mixup_rate=0.5):
+    def __init__(self, alpha, num_classes, dataloader):
         self.alpha = alpha
         self.dataloader = dataloader
         self.num_classes = num_classes
-        self.mixup_rate = 0.5
 
     def mixup_loader(self, loader):
         for input, target in loader:
-            i, t = mixup(self.alpha, self.num_classes, input, target, self.mixup_rate)
+            i, t = mixup(self.alpha, self.num_classes, input, target)
             yield i, t
 
     def __iter__(self):

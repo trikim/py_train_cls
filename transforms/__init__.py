@@ -1,18 +1,14 @@
 
 from .transforms import (
     CenterCrop,
+    ResizeSolid,
     ColorJitter,
     Compose,
     CutOut,
     Normalize,
     RandomHorizontalFlip,
-    RandomVerticalFlip,
     RandomResizedCrop,
     RandomErasing,
     ToTensor,
-    ToCVImage,
-    # TenCrop,
-    RandomTransforms,
-    RandomChoice,
-    Resize
+    ToCVImage
 )

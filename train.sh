@@ -1,22 +1,26 @@
-# cd /project/train/src_repo
-# python /project/train/src_repo/train.py \
 python train.py \
-    -net mobilenet \
-    -batch 64 \
-    -image-size 128 \
-    -lr 0.04 \
-    -num_classes 7 \
-    -gpus 0 \
-    -lr_step 20,40,60 \
-    -epoch 60 \
-    -cutmix_prob 0.5 \
-    -imgs_root /home/data/14 \
-    -label_txt clothes_train.txt \
+    -net resnet50 \
+    -image-size 224 \
     -pretrained \
-    -test \
-    -opt_level O0 \
-    -export_onnx \
-    # -resume \
-    # -refine mobilenet-80-regular.pth
-# wait
-# python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --scale_values=[58.395,57.120,57.375] --mean_values=[123.675,116.28,103.53] --input_model /project/train/models/mobilenet/deploy.onnx --data_type=FP16 --output_dir /project/train/models/mobilenet/
+    -batch 360 \
+    -workers 32 \
+    -lr 0.04 \
+    -lr_step 20,40,60 \
+    -epoch 80 \
+    -warm 0 \
+    -save_epoch 1 \
+    -num_classes 2 \
+    -gpus 0,1,2,3 \
+    -cutmix_prob 0.5 \
+    -apex \
+    -imgs_root /home/data/terrorism/train_sqsh \
+    -label_txt terror_sqsh_v2.2_train.txt \
+    -resume \
+    -refine checkpoints/resnet50_sqsh_v0/resnet50-80-regular.pth \
+    # -opt_level O1 \
+    # -test \
+    # -test_label_txt scene_11cls_val.txt \
+    # -imgs_root /home/jovyan/data/scene_11cls/train \
+    # -label_txt scene_11cls_train.txt \
+    # -test \
+    # -test_label_txt scene_11cls_val.txt \

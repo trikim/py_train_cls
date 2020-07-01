@@ -8,6 +8,11 @@ import time
 import sys
 import torch
 USE_TENSORBOARD = False
+#try:
+#  import tensorboardX
+#  print('Using tensorboardX')
+#except:
+#  USE_TENSORBOARD = False
 
 class Logger(object):
   def __init__(self, opt):
@@ -58,3 +63,8 @@ class Logger(object):
   
   def close(self):
     self.log.close()
+  
+#  def scalar_summary(self, tag, value, step):
+#    """Log a scalar variable."""
+#    if USE_TENSORBOARD:
+#      self.writer.add_scalar(tag, value, step)

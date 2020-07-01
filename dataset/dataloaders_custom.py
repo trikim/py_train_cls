@@ -7,20 +7,22 @@ from conf import settings
 import torchvision.transforms as transforms
 from utils import *
 
-def get_custom_train_loader(args, data_path, path_txt,batch_size, num_classes, workers=5, one_hot=False,  _worker_init_fn=None):
+def get_custom_train_loader(args, data_path, path_txt,batch_size, num_classes, workers=5,one_hot=False,  _worker_init_fn=None):
     train_transforms = transforms.Compose([
         transforms.ToPILImage(),
         # transforms.ToCVImage(),
-        # transforms.Resize(int(args.image_size / 0.875)),
-        # transforms.Resize(args.image_size),        
+        # transforms.RandomResizedCrop(args.image_size),
+        # transforms.RandomHorizontalFlip(),
+        # transforms.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4),
+
+        # transforms.RandomResizedCrop(args.image_size),
         transforms.RandomResizedCrop(args.image_size, scale=(0.8, 1.0)),
         transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
         transforms.RandomRotation(10),
         transforms.RandomHorizontalFlip(),
-        # transforms.RandomGrayscale(p=0.2),
         # transforms.RandomVerticalFlip(),
-        transforms.ColorJitter(brightness=0.3, contrast=0.1, saturation=0.3, hue=0.05),
-        # transforms.RandomErasing(),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.3, hue=0.1),
+        #transforms.RandomErasing(),
         #transforms.CutOut(56),
         transforms.ToTensor(),
         transforms.Normalize(settings.TRAIN_MEAN, settings.TRAIN_STD)])
@@ -35,9 +37,8 @@ def get_custom_val_loader(args, data_path, path_txt,batch_size, num_classes, wor
     test_transforms = transforms.Compose([
         transforms.ToPILImage(),
         # transforms.ToCVImage(),
-        # transforms.Resize(int(args.image_size / 0.875)),
-        transforms.Resize((args.image_size, args.image_size)),
-        # transforms.CenterCrop(args.image_size),
+        transforms.CenterCrop(args.image_size),
+        #transforms.ResizeSolid(args.image_size),
         transforms.ToTensor(),
         transforms.Normalize(settings.TRAIN_MEAN, settings.TRAIN_STD)])
     test_dataloader = get_test_dataloader(

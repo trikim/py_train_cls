@@ -5,11 +5,10 @@ import cv2
 import numpy as np
 from torch.utils.data import Dataset
 from PIL import Image
-from conf import settings
 
 class CUB_200_2011_Train(Dataset):
 
-    def __init__(self, path, path_txt, transform=None, target_transform=None):
+    def __init__(self, path, transform=None, target_transform=None):
 
         self.root = path
         self.transform = transform
@@ -18,12 +17,11 @@ class CUB_200_2011_Train(Dataset):
         self.num_train = 0
         self.train_id = []
         self.class_ids = {}
-        with open(os.path.join(self.root, path_txt)) as f:
+        with open(os.path.join(self.root, 'face_attr_train.txt')) as f:
             for line in f:
                 self.num_train = self.num_train + 1
-                #print("line:",line.strip().split(settings.DATA_SPLIT))
-
-                path, class_id = line.strip().split(settings.DATA_SPLIT)
+                #print("line:",line.split())
+                path, class_id = line.split()
                 self.images_path[self.num_train] = path
                 self.class_ids[self.num_train] = class_id
                 self.train_id.append(self.num_train)
@@ -69,7 +67,7 @@ class CUB_200_2011_Train(Dataset):
 
 class CUB_200_2011_Test(Dataset):
 
-    def __init__(self, path, path_txt, transform=None, target_transform=None):
+    def __init__(self, path, transform=None, target_transform=None):
 
         self.root = path
         self.transform = transform
@@ -78,10 +76,10 @@ class CUB_200_2011_Test(Dataset):
         self.num_train = 0
         self.class_ids = {}
         self.train_id = []
-        with open(os.path.join(self.root, path_txt)) as f:
+        with open(os.path.join(self.root, 'face_attr_test.txt')) as f:
             for line in f:
                 self.num_train = self.num_train + 1
-                path, class_id = line.strip().split(settings.DATA_SPLIT)
+                path, class_id = line.split()
                 self.images_path[self.num_train] = path
                 self.class_ids[self.num_train] = class_id
                 self.train_id.append(self.num_train)
@@ -99,9 +97,8 @@ class CUB_200_2011_Test(Dataset):
         image_id = self.train_id[index]
         class_id = int(self._get_class_by_id(image_id))# - 1
         path = self._get_path_by_id(image_id)
-        image = cv2.imread(os.path.join(self.root, path))
+        image = cv2.imread(os.path.join(self.root, 'images', path))
         #image = Image.open(os.path.join(self.root, 'images', path))
-        #print("path:",path)
         #if image.mode != 'RGB':
         #    image = image.convert('RGB')
         #image = np.array(image)
@@ -117,7 +114,7 @@ class CUB_200_2011_Test(Dataset):
         if self.target_transform:
             class_id = self.target_transform(class_id)
 
-        return image, class_id#,path
+        return image, class_id
 
     def _get_path_by_id(self, image_id):
 

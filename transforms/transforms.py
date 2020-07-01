@@ -1,3 +1,4 @@
+
 import random
 import math
 import numbers
@@ -6,7 +7,6 @@ import cv2
 import numpy as np
 
 import torch
-# import torch.nn.functional as F
 
 class Compose:
     """Composes several transforms together.
@@ -54,74 +54,6 @@ class ToCVImage:
             
         return image
 
-class RandomTransforms(object):
-    """Base class for a list of transformations with randomness
-
-    Args:
-        transforms (list or tuple): list of transformations
-    """
-
-    def __init__(self, transforms):
-        assert isinstance(transforms, (list, tuple))
-        self.transforms = transforms
-
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    def __repr__(self):
-        format_string = self.__class__.__name__ + '('
-        for t in self.transforms:
-            format_string += '\n'
-            format_string += '    {0}'.format(t)
-        format_string += '\n)'
-        return format_string
-
-class RandomChoice(RandomTransforms):
-    """Apply single transformation randomly picked from a list
-    """
-    def __call__(self, img):
-        t = random.choice(self.transforms)
-        return t(img)
-
-class Resize:
-    """Resize the input PIL Image to the given size.
-
-    Args:
-        size (sequence or int): Desired output size. If size is a sequence like
-            (h, w), output size will be matched to this. If size is an int,
-            smaller edge of the image will be matched to this number.
-            i.e, if height > width, then image will be rescaled to
-            (size * height / width, size)
-        interpolation (int, optional): Desired interpolation. Default is
-            ``PIL.Image.BILINEAR``
-    """
-
-    def __init__(self, size, interpolation='linear'):
-        self.methods={
-            "area":cv2.INTER_AREA, 
-            "nearest":cv2.INTER_NEAREST, 
-            "linear" : cv2.INTER_LINEAR, 
-            "cubic" : cv2.INTER_CUBIC, 
-            "lanczos4" : cv2.INTER_LANCZOS4
-        }
-        self.size = (size, size)
-        self.interpolation = self.methods[interpolation]
-
-    def __call__(self, img):
-        """
-        Args:
-            img (PIL Image): Image to be scaled.
-
-        Returns:
-            PIL Image: Rescaled image.
-        """
-        resized = cv2.resize(img, self.size, self.interpolation)
-        
-        return resized
-
-    def __repr__(self):
-        interpolate_str = _pil_interpolation_to_str[self.interpolation]
-        return self.__class__.__name__ + '(size={0}, interpolation={1})'.format(self.size, interpolate_str)
 
 class RandomResizedCrop:
     """Randomly crop a rectangle region whose aspect ratio is randomly sampled 
@@ -214,27 +146,6 @@ class RandomHorizontalFlip:
         """
         if random.random() < self.p:
             img = cv2.flip(img, 1)
-        
-        return img
-
-class RandomVerticalFlip:
-    """Vertically flip the given opencv image with given probability p.
-
-    Args:
-        p: probability of the image being flipped
-    """
-    def __init__(self, p=0.5):
-        self.p = p
-    
-    def __call__(self, img):
-        """
-        Args:
-            the image to be flipped
-        Returns:
-            flipped image
-        """
-        if random.random() < self.p:
-            img = cv2.flip(img, 0)
         
         return img
 
@@ -410,49 +321,38 @@ class CenterCrop:
                              topleft_x : topleft_x + self.cropped[1]]
 
         return center_cropped
+class ResizeSolid:
+    """resize each image�~@~Ys shorter edge to r pixels while keeping its aspect ratio. 
+    Next, we crop out the cropped region in the center 
+    Args:
+        resized: resize image' shorter edge to resized pixels while keeping the aspect ratio
+        cropped: output image size(h, w), if cropped is an int, then output cropped * cropped size
+                 image
+    """
 
-# class TenCrop(object):
-#     """Crop the given PIL Image into four corners and the central crop plus the flipped version of
-#     these (horizontal flipping is used by default)
+    def __init__(self, cropped, resized=256, interpolation='linear'):
 
-#     .. Note::
-#          This transform returns a tuple of images and there may be a mismatch in the number of
-#          inputs and targets your Dataset returns. See below for an example of how to deal with
-#          this.
+        methods = {
+            "area":cv2.INTER_AREA,
+            "nearest":cv2.INTER_NEAREST,
+            "linear" : cv2.INTER_LINEAR,
+            "cubic" : cv2.INTER_CUBIC,
+            "lanczos4" : cv2.INTER_LANCZOS4
+        }
+        self.interpolation = methods[interpolation]
 
-#     Args:
-#         size (sequence or int): Desired output size of the crop. If size is an
-#             int instead of sequence like (h, w), a square crop (size, size) is
-#             made.
-#         vertical_flip (bool): Use vertical flipping instead of horizontal
+        self.resized = resized
 
-#     Example:
-#          >>> transform = Compose([
-#          >>>    TenCrop(size), # this is a list of PIL Images
-#          >>>    Lambda(lambda crops: torch.stack([ToTensor()(crop) for crop in crops])) # returns a 4D tensor
-#          >>> ])
-#          >>> #In your test loop you can do the following:
-#          >>> input, target = batch # input is a 5d tensor, target is 2d
-#          >>> bs, ncrops, c, h, w = input.size()
-#          >>> result = model(input.view(-1, c, h, w)) # fuse batch size and ncrops
-#          >>> result_avg = result.view(bs, ncrops, -1).mean(1) # avg over crops
-#     """
+        if isinstance(cropped, numbers.Number):
+            cropped = (cropped, cropped)
 
-#     def __init__(self, size, vertical_flip=False):
-#         self.size = size
-#         if isinstance(size, numbers.Number):
-#             self.size = (int(size), int(size))
-#         else:
-#             assert len(size) == 2, "Please provide only two dimensions (h, w) for size."
-#             self.size = size
-#         self.vertical_flip = vertical_flip
+        self.cropped = cropped
 
-#     def __call__(self, img):
-#         return F.ten_crop(img, self.size, self.vertical_flip)
+    def __call__(self, img):
 
-#     def __repr__(self):
-#         return self.__class__.__name__ + '(size={0}, vertical_flip={1})'.format(self.size, self.vertical_flip)
+        img = cv2.resize(img, (self.resized, self.resized), interpolation=self.interpolation)
 
+        return img
 class RandomErasing:
     """Random erasing the an rectangle region in Image.
     Class that performs Random Erasing in Random Erasing Data Augmentation by Zhong et al.

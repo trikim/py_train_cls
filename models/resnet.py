@@ -10,8 +10,8 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
-    'resnet34': 'http://eagle-nest-backend-service.default.svc.cluster.local/storage/pre-model/torch_models/models/resnet34-333f7ec4.pth',
-    'resnet50': 'http://eagle-nest-backend-service.default.svc.cluster.local/storage/pre-model/torch_models/models/resnet50-19c8e357.pth',
+    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
+    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
     'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
     'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
     'resnext50_32x4d': 'https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth',
@@ -121,8 +121,9 @@ class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None):
+                 norm_layer=None,export_onnx=False):
         super(ResNet, self).__init__()
+        self.export_onnx = export_onnx
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
@@ -152,8 +153,8 @@ class ResNet(nn.Module):
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
-
-        self.softmax = nn.Softmax()
+        if self.export_onnx:
+            self.logit = nn.Softmax(dim=1)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -196,7 +197,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def _forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -210,9 +211,13 @@ class ResNet(nn.Module):
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)
-        # x = self.softmax(x)
-
+        if self.export_onnx:
+            x = self.logit(x)
         return x
+
+    # Allow for accessing forward method in a inherited class
+    forward = _forward
+
 
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     model = ResNet(block, layers, **kwargs)
@@ -220,11 +225,6 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
         state_dict = load_state_dict_from_url(model_urls[arch],
                                               progress=progress)
         model.load_state_dict(state_dict)
-        # model_state = model.state_dict()
-        # del state_dict['fc.weight']
-        # del state_dict['fc.bias']
-        # model_state.update(state_dict)
-        # model.load_state_dict(model_state)
     return model
 
 

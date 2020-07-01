@@ -6,7 +6,7 @@ __all__ = ['MobileNetV2', 'mobilenet_v2']
 
 
 model_urls = {
-    'mobilenet_v2': 'http://eagle-nest-backend-service.default.svc.cluster.local/storage/pre-model/torch_models/models/mobilenet_v2-b0353104.pth',
+    'mobilenet_v2': 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
 }
 
 
@@ -75,7 +75,8 @@ class MobileNetV2(nn.Module):
                  width_mult=1.0,
                  inverted_residual_setting=None,
                  round_nearest=8,
-                 block=None):
+                 block=None,
+                 export_onnx=False):
         """
         MobileNet V2 main class
         Args:
@@ -87,12 +88,11 @@ class MobileNetV2(nn.Module):
             block: Module specifying inverted residual building block for mobilenet
         """
         super(MobileNetV2, self).__init__()
-        print("num_class:",num_classes)
         if block is None:
             block = InvertedResidual
         input_channel = 32
         last_channel = 1280
-
+        self.export_onnx = export_onnx
         if inverted_residual_setting is None:
             inverted_residual_setting = [
                 # t, c, n, s
@@ -131,6 +131,10 @@ class MobileNetV2(nn.Module):
             nn.Dropout(0.2),
             nn.Linear(self.last_channel, num_classes),
         )
+        self.avgpool = nn.AvgPool2d((2,2), stride=1)
+        self.flatten = nn.Flatten()
+        if self.export_onnx:
+            self.logit = nn.Softmax()
         #self.fc = nn.Linear(self.last_channel, num_classes)
         # weight initialization
         for m in self.modules():
@@ -149,8 +153,13 @@ class MobileNetV2(nn.Module):
         # This exists since TorchScript doesn't support inheritance, so the superclass method
         # (this one) needs to have a name other than `forward` that can be accessed in a subclass
         x = self.features(x)
-        x = x.mean([2, 3])
+        # x = x.mean([2, 3])
+        x = self.avgpool(x)
+        x = self.flatten(x)
+
         x = self.classifier(x)
+        if self.export_onnx:
+            x = self.logit(x)
         #x = self.fc(x)
         return x
 
